@@ -8,6 +8,24 @@ in this folder and ready to use.
 
 
 ----------------------------------------------------------------------
+EASIEST WAY: VideoDownloader.exe (no PowerShell needed)
+----------------------------------------------------------------------
+
+1. Double-click  VideoDownloader.exe  in this folder.
+2. When it asks, paste the video URL (right-click inside the black
+   window to paste) and press Enter.
+3. Wait for the download to finish. The video is saved in the
+   downloads  folder inside this folder.
+
+To update the downloader engine, run this in PowerShell:
+
+    .\VideoDownloader.exe -u
+
+Everything below describes the PowerShell version (Get-Video.ps1),
+which does the same thing and offers more options.
+
+
+----------------------------------------------------------------------
 HOW TO START (one-time setup)
 ----------------------------------------------------------------------
 
