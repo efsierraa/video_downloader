@@ -121,6 +121,9 @@ KEEPING THE TOOL UPDATED
 NOTES
 ----------------------------------------------------------------------
 
+   - If the helper programs (yt-dlp.exe, deno.exe, ffmpeg.exe,
+     ffprobe.exe) are ever deleted, the script downloads them again
+     automatically the next time you run it.
    - Downloads may take a few minutes for long videos.
    - Facebook private/unlisted videos may not work.
    - If a YouTube video is age-restricted, you may need to log in
