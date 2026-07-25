@@ -113,6 +113,12 @@ if (Test-Path -LiteralPath (Join-Path $FfmpegDir "ffmpeg.exe")) {
     $YtDlpArgs += "--ffmpeg-location", $FfmpegDir
 }
 
+# Optional: exported browser cookies for sites that require login (Facebook).
+$CookiesFile = Join-Path $PSScriptRoot "cookies.txt"
+if (Test-Path -LiteralPath $CookiesFile) {
+    $YtDlpArgs += "--cookies", $CookiesFile
+}
+
 # Self-update mode: .\Get-Video.ps1 -Update
 if ($Update) {
     & $YtDlp -U

@@ -8,7 +8,28 @@ in this folder and ready to use.
 
 
 ----------------------------------------------------------------------
-EASIEST WAY: VideoDownloader.exe (no PowerShell needed)
+EASIEST WAY: "Video Downloader.exe" (the app with a window)
+----------------------------------------------------------------------
+
+1. Double-click  Video Downloader.exe  in this folder.
+2. Paste the video URL into the top box (Ctrl+V works).
+3. Click the big  Download  button and wait for the bar to fill.
+4. The video is saved in the  downloads  folder inside this folder.
+   When it finishes, the app offers to open that folder for you.
+
+Optional:
+   - Click  Browse...  to save the videos somewhere else.
+   - Use the  Quality  list to pick a smaller size (1080p, 720p,
+     480p) or  Audio only (MP3)  to keep just the sound.
+   - If downloads ever stop working, click  Update yt-dlp.
+
+The very first time, the app downloads its helper programs by
+itself (yt-dlp, deno, ffmpeg). This takes a few minutes and needs
+internet access. It only happens once.
+
+
+----------------------------------------------------------------------
+ALTERNATIVE: VideoDownloader.exe (black console window)
 ----------------------------------------------------------------------
 
 1. Double-click  VideoDownloader.exe  in this folder.
@@ -133,6 +154,31 @@ KEEPING THE TOOL UPDATED
 
    This updates the downloader engine to the latest version.
    It takes a few seconds and requires internet access.
+
+
+----------------------------------------------------------------------
+FACEBOOK VIDEOS THAT FAIL WITH "Cannot parse data"
+----------------------------------------------------------------------
+
+   Most Facebook videos need you to be logged in. The app can log in
+   for you (one-time, about 1 minute):
+
+   1. Open  Video Downloader.exe.
+   2. Click the  Facebook login...  button at the bottom.
+   3. A window with the real Facebook website opens. Log in there
+      with your usual Facebook email and password.
+   4. Once you are logged in, click  Save cookies & Close.
+   5. Try the download again -- it will now work.
+
+   Your login stays inside this folder (the  webview2-data  folder
+   and the  cookies.txt  file) and is only used to download videos.
+   If Facebook downloads fail again after a long time, repeat the
+   steps above (your login expired).
+
+   Never share  cookies.txt  with anyone -- it is like a password.
+
+   (The PowerShell script and the console VideoDownloader.exe also
+   use  cookies.txt  automatically once it exists.)
 
 
 ----------------------------------------------------------------------

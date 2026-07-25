@@ -94,6 +94,9 @@ class VideoDownloader
             yargs += "--js-runtimes \"deno:" + Deno + "\" ";
         if (File.Exists(Ffmpeg))
             yargs += "--ffmpeg-location \"" + ExeDir + "\" ";
+        string cookies = Path.Combine(ExeDir, "cookies.txt");
+        if (File.Exists(cookies))
+            yargs += "--cookies \"" + cookies + "\" ";
         yargs += "--format \"" + Format + "\" ";
         yargs += "--output \"" + outTemplate + "\" ";
         yargs += "\"" + url + "\"";

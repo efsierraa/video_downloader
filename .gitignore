@@ -3,3 +3,8 @@ yt-dlp.exe
 ffmpeg.exe
 ffprobe.exe
 deno.exe
+cookies.txt
+webview2-data/
+Microsoft.Web.WebView2.Core.dll
+Microsoft.Web.WebView2.WinForms.dll
+WebView2Loader.dll
