@@ -370,8 +370,7 @@ class VideoDownloaderApp : Form
         {
             MessageBox.Show(this,
                 "Could not open the login window:\r\n\r\n" + ex.Message +
-                "\r\n\r\n(Microsoft WebView2 Runtime is required. If Windows is old,\r\n" +
-                "installing the free .NET Framework 4.8 update also fixes this.)",
+                "\r\n\r\n(Microsoft WebView2 Runtime is required.)",
                 "Video Downloader", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
         UpdateFbLoginButton();
@@ -643,16 +642,20 @@ class VideoDownloaderApp : Form
         string wv2Core     = Path.Combine(ExeDir, "Microsoft.Web.WebView2.Core.dll");
         string wv2WinForms = Path.Combine(ExeDir, "Microsoft.Web.WebView2.WinForms.dll");
         string wv2Loader   = Path.Combine(ExeDir, "WebView2Loader.dll");
+        string wv2Stamp    = Path.Combine(ExeDir, "webview2-ok.txt");
 
+        // The stamp file marks a known-good download. Older versions of this
+        // app extracted the WebView2 package matching by file name only and
+        // could pick the WRONG build of the DLLs (UAP/.NET Core instead of
+        // .NET Framework), which breaks the login window with errors like
+        // "Could not load file or assembly System.ComponentModel.Primitives".
+        // Missing stamp = download again with the correct paths.
         bool needWv2 = !File.Exists(wv2Core) || !File.Exists(wv2WinForms) ||
-                       !File.Exists(wv2Loader);
-        bool needFacades = NeedsNetStandardFacades() &&
-            !File.Exists(Path.Combine(ExeDir, "netstandard.dll"));
-
-        if (!needWv2 && !needFacades) return;
+                       !File.Exists(wv2Loader) || !File.Exists(wv2Stamp);
+        if (!needWv2) return;
 
         SetStatus("Downloading WebView2 components (one-time setup)...");
-        Log("WebView2 components missing. Downloading now...");
+        Log("Downloading WebView2 components...");
 
         string tmp = Path.Combine(Path.GetTempPath(),
             "wv2setup-" + Guid.NewGuid().ToString("N"));
@@ -660,58 +663,33 @@ class VideoDownloaderApp : Form
 
         try
         {
-            if (needWv2)
-            {
-                string zip = Path.Combine(tmp, "webview2.nupkg");
-                DownloadFile(
-                    "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2",
-                    zip, "WebView2 SDK");
+            string zip = Path.Combine(tmp, "webview2.nupkg");
+            DownloadFile(
+                "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2",
+                zip, "WebView2 SDK");
 
-                using (ZipArchive archive = ZipFile.OpenRead(zip))
+            using (ZipArchive archive = ZipFile.OpenRead(zip))
+            {
+                foreach (ZipArchiveEntry entry in archive.Entries)
                 {
-                    foreach (ZipArchiveEntry entry in archive.Entries)
-                    {
-                        string name = entry.Name;
-                        if (string.Equals(name, "Microsoft.Web.WebView2.Core.dll",
-                                StringComparison.OrdinalIgnoreCase))
-                            entry.ExtractToFile(wv2Core, true);
-                        else if (string.Equals(name, "Microsoft.Web.WebView2.WinForms.dll",
-                                StringComparison.OrdinalIgnoreCase))
-                            entry.ExtractToFile(wv2WinForms, true);
-                        else if (string.Equals(name, "WebView2Loader.dll",
-                                StringComparison.OrdinalIgnoreCase))
-                            entry.ExtractToFile(wv2Loader, true);
-                    }
+                    // Match by FULL path inside the package: it contains
+                    // several builds of the same DLL (net462, netcoreapp3.0,
+                    // UAP x86/x64/arm64) and only the net462 build and the
+                    // x64 loader work with this app.
+                    string fn = entry.FullName.Replace('\\', '/');
+                    if (string.Equals(fn, "lib/net462/Microsoft.Web.WebView2.Core.dll",
+                            StringComparison.OrdinalIgnoreCase))
+                        entry.ExtractToFile(wv2Core, true);
+                    else if (string.Equals(fn, "lib/net462/Microsoft.Web.WebView2.WinForms.dll",
+                            StringComparison.OrdinalIgnoreCase))
+                        entry.ExtractToFile(wv2WinForms, true);
+                    else if (string.Equals(fn, "runtimes/win-x64/native/WebView2Loader.dll",
+                            StringComparison.OrdinalIgnoreCase))
+                        entry.ExtractToFile(wv2Loader, true);
                 }
             }
 
-            if (needFacades)
-            {
-                // The WebView2 .NET assemblies are .NET Standard 2.0 libraries.
-                // .NET Framework 4.7.2+ supports that out of the box; older
-                // frameworks need the facade assemblies next to the app,
-                // otherwise the login window fails with errors like
-                // "Could not load file or assembly System.ComponentModel.Primitives".
-                Log("Older .NET Framework detected. Downloading .NET Standard support files...");
-                SetStatus("Downloading .NET Framework support files...");
-                string zip = Path.Combine(tmp, "netstandard.nupkg");
-                DownloadFile(
-                    "https://www.nuget.org/api/v2/package/NETStandard.Library/2.0.3",
-                    zip, ".NET Standard support");
-
-                using (ZipArchive archive = ZipFile.OpenRead(zip))
-                {
-                    foreach (ZipArchiveEntry entry in archive.Entries)
-                    {
-                        if (entry.FullName.StartsWith("build/netstandard2.0/ref/",
-                                StringComparison.OrdinalIgnoreCase) &&
-                            entry.Name.EndsWith(".dll", StringComparison.OrdinalIgnoreCase))
-                        {
-                            entry.ExtractToFile(Path.Combine(ExeDir, entry.Name), true);
-                        }
-                    }
-                }
-            }
+            File.WriteAllText(wv2Stamp, "net462");
 
             Log("WebView2 components ready.");
             SetStatus("WebView2 components ready.");
@@ -721,26 +699,6 @@ class VideoDownloaderApp : Form
         {
             try { Directory.Delete(tmp, true); } catch { }
         }
-    }
-
-    // True if Windows has .NET Framework older than 4.7.2 (Release 461808),
-    // which does not include .NET Standard 2.0 support built in.
-    static bool NeedsNetStandardFacades()
-    {
-        try
-        {
-            using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(
-                @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full"))
-            {
-                if (key != null)
-                {
-                    object rel = key.GetValue("Release");
-                    if (rel is int && (int)rel >= 461808) return false;
-                }
-            }
-        }
-        catch { }
-        return true;
     }
 
     void DownloadFile(string url, string destPath, string label)

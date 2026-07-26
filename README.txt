@@ -103,11 +103,7 @@ WHAT GETS DOWNLOADED (AND WHY)
    - WebView2 components (3 .dll files, windowed app only)
                   A small Microsoft browser used by the "Facebook
                   login..." window, so you can log in to Facebook
-                  and download videos that need a login. On old
-                  Windows (.NET Framework before 4.7.2), the app
-                  also downloads .NET Standard support files
-                  (netstandard.dll and friends) that the login
-                  window needs.
+                  and download videos that need a login.
 
    Everything is downloaded from the official download locations
    of each project (github.com, nuget.org, gyan.dev). Nothing
