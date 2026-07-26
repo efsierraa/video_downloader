@@ -140,15 +140,21 @@ The only things that ever get downloaded are the videos themselves and, when you
 
 ## ⚠️ Antivirus false positive
 
-Windows Defender may flag the `.exe` files with names like **Trojan:Win32/Sabsik.FL.A!ml**.
+Windows Defender may flag the `.exe` files with names like **Trojan:Win32/Wacatac.B!ml** or **Trojan:Win32/Sabsik.FL.A!ml**.
 
-**This is a false positive** — the detection is an ML-based guess, not an actual virus. It happens because the app is **not digitally signed**: a signing certificate costs money every year, and this is a free tool, so it is not signed for economical reasons. Unsigned apps get flagged "just in case", especially by less common antivirus engines.
+**This is a false positive** — the `!ml` suffix means it's a machine-learning *guess*, not an actual virus. It happens because the app is **not digitally signed**: a signing certificate costs money every year, and this is a free tool, so it is not signed for economical reasons. Unsigned apps with few downloads get guessed as malware "just in case".
 
-(The app itself downloads nothing — all helper tools come inside the zip — so it should be flagged less and less over time.)
+> ⚠️ **Important:** VirusTotal runs Microsoft's engine at *maximum* sensitivity (cloud-delivered, aggressive ML). A file flagged there may run perfectly fine on your own PC with normal Windows Defender settings. Check your actual computer — it likely doesn't block it.
+
+(The app itself downloads nothing — all helper tools come inside the zip.)
 
 ### The fix
 
-Add this folder to your antivirus exclusions:
+**Report the false positive to Microsoft** (free, they'll whitelist this build):
+
+> https://www.microsoft.com/en-us/wdsi/filesubmission
+
+You can also add this folder to your antivirus exclusions:
 
 > Windows Security → Virus & threat protection → Manage settings → **Exclusions** → Add this folder
 
