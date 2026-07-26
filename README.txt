@@ -247,8 +247,22 @@ FACEBOOK VIDEOS THAT FAIL WITH "Cannot parse data"
 
    Never share  cookies.txt  with anyone -- it is like a password.
 
-   (The PowerShell script and the console VideoDownloader.exe also
-   use  cookies.txt  automatically once it exists.)
+    (The PowerShell script and the console VideoDownloader.exe also
+    use  cookies.txt  automatically once it exists.)
+
+    NO APP? If you cannot run  Video Downloader.exe  at all (for
+    example, your antivirus blocks it), you can create  cookies.txt
+    by hand:
+
+     1. In your normal browser (Chrome, Edge, Firefox), install the
+        extension "Get cookies.txt LOCALLY".
+     2. Go to  www.facebook.com  and log in as usual.
+     3. Click the extension icon and export the cookies.
+     4. Save the exported file as  cookies.txt  inside this folder
+        (replace the old one if asked).
+
+    The script and the apps pick it up automatically on the next
+    download.
 
 
 ----------------------------------------------------------------------
