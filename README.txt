@@ -18,13 +18,16 @@ EASIEST WAY: "Video Downloader.exe" (the app with a window)
    When it finishes, the app offers to open that folder for you.
 
 Optional:
-   - Click  Browse...  to save the videos somewhere else.
+   - Click  Browse...  to save the video somewhere else. A
+     "Save video as..." window opens where you can pick both the
+     folder and the file name.
    - Use the  Quality  list to pick a smaller size (1080p, 720p,
      480p) or  Audio only (MP3)  to keep just the sound.
    - If downloads ever stop working, click  Update yt-dlp.
 
 The very first time, the app downloads its helper programs by
-itself (yt-dlp, deno, ffmpeg). This takes a few minutes and needs
+itself (yt-dlp, deno, ffmpeg, and the WebView2 browser components
+used for Facebook login). This takes a few minutes and needs
 internet access. It only happens once.
 
 
@@ -163,12 +166,15 @@ FACEBOOK VIDEOS THAT FAIL WITH "Cannot parse data"
    Most Facebook videos need you to be logged in. The app can log in
    for you (one-time, about 1 minute):
 
-   1. Open  Video Downloader.exe.
-   2. Click the  Facebook login...  button at the bottom.
-   3. A window with the real Facebook website opens. Log in there
-      with your usual Facebook email and password.
-   4. Once you are logged in, click  Save cookies & Close.
-   5. Try the download again -- it will now work.
+    1. Open  Video Downloader.exe.
+    2. Click the  Facebook login...  button at the bottom.
+    3. A window with the real Facebook website opens. Log in there
+       with your usual Facebook email and password.
+    4. Once you are logged in, click  Save cookies & Close.
+    5. Try the download again -- it will now work.
+
+    Once your login is saved, the button changes to
+    "Facebook login (saved)" so you know it is ready.
 
    Your login stays inside this folder (the  webview2-data  folder
    and the  cookies.txt  file) and is only used to download videos.
