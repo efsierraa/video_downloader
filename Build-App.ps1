@@ -57,8 +57,6 @@ $Refs = @(
     "/r:System.dll",
     "/r:System.Drawing.dll",
     "/r:System.Windows.Forms.dll",
-    "/r:System.IO.Compression.dll",
-    "/r:System.IO.Compression.FileSystem.dll",
     "/r:$(Join-Path $PSScriptRoot 'Microsoft.Web.WebView2.Core.dll')",
     "/r:$(Join-Path $PSScriptRoot 'Microsoft.Web.WebView2.WinForms.dll')"
 )

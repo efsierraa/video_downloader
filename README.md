@@ -27,8 +27,8 @@ Double-click **Video Downloader.exe**, paste a URL, and click Download.
 | **Update yt-dlp** | Refresh the download engine if sites ever stop working |
 | **Facebook login…** | Log into Facebook so the app can download private videos |
 
-> The very first run downloads a few helpers automatically (see [what gets downloaded](#-what-gets-downloaded-and-why)).  
-> It takes a couple of minutes and only happens once.
+> Everything the app needs is already in the zip — the app itself downloads nothing  
+> (which also keeps antivirus programs happy). See [the helper tools](#-helper-tools-already-included).
 
 ---
 
@@ -121,9 +121,9 @@ The script and the apps pick it up on the next download.
 
 ---
 
-## 🧰 What gets downloaded (and why)
+## 🧰 Helper tools (already included)
 
-On first run the app fetches a few helpers — one time only, from their official download pages.
+Everything the app needs comes **already inside the zip** — the app itself downloads nothing. Here's what each helper does:
 
 | File | Why |
 |---|---|
@@ -132,7 +132,9 @@ On first run the app fetches a few helpers — one time only, from their officia
 | **ffmpeg.exe + ffprobe.exe** | Merges video + audio streams into one file; also converts to MP3 |
 | **WebView2 DLLs** (3 files) | A tiny Microsoft browser for the Facebook login window (GUI app only) |
 
-Everything lands inside this folder and nothing is installed system-wide.
+The only things that ever get downloaded are the videos themselves and, when you click **Update yt-dlp**, yt-dlp's own self-update. Nothing is installed system-wide.
+
+> If a helper file ever gets deleted, re-download the zip — or run `Get-Video.ps1` once, it can fetch missing tools for you.
 
 ---
 
@@ -140,10 +142,9 @@ Everything lands inside this folder and nothing is installed system-wide.
 
 Windows Defender may flag the `.exe` files with names like **Trojan:Win32/Sabsik.FL.A!ml**.
 
-**This is a false positive** — the detection is an ML-based guess, not an actual virus. It happens because:
+**This is a false positive** — the detection is an ML-based guess, not an actual virus. It happens because the app is **not digitally signed**: a signing certificate costs money every year, and this is a free tool, so it is not signed for economical reasons. Unsigned apps get flagged "just in case", especially by less common antivirus engines.
 
-- The app is **not digitally signed** (a signing certificate costs money every year, and this is a free tool)
-- Unsigned programs that download helper tools look suspicious to antivirus heuristics
+(The app itself downloads nothing — all helper tools come inside the zip — so it should be flagged less and less over time.)
 
 ### The fix
 
@@ -161,7 +162,7 @@ You can also verify the `.exe` files at [virustotal.com](https://www.virustotal.
 
 ## 📝 Notes
 
-- If any helper gets deleted, it re-downloads automatically on next run
+- If a helper file gets deleted, re-download the zip (or run `Get-Video.ps1` once — it fetches missing tools)
 - Long videos may take a few minutes
 - Private/unlisted Facebook videos may not work
 - Age-restricted YouTube videos may need a login (try a different one)

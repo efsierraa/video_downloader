@@ -11,8 +11,7 @@
 // or manually:
 //   C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:winexe ^
 //     /out:"Video Downloader.exe" /r:System.dll /r:System.Drawing.dll ^
-//     /r:System.Windows.Forms.dll /r:System.IO.Compression.dll ^
-//     /r:System.IO.Compression.FileSystem.dll "Video Downloader.cs"
+//     /r:System.Windows.Forms.dll "Video Downloader.cs"
 
 using System;
 using System.ComponentModel;
@@ -20,7 +19,6 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -240,12 +238,36 @@ class VideoDownloaderApp : Form
     {
         base.OnShown(e);
         EnableInputs(false);
-        SetStatus("Checking required tools...");
+        SetStatus("Checking required files...");
 
         RunBackground(delegate
         {
-            EnsureTools();
-            EnsureWebView2();
+            // The app never downloads anything itself: every tool it needs
+            // ships next to the exe in the release zip. (The only exception
+            // is "Update yt-dlp", where yt-dlp updates itself.)
+            string missing = MissingFiles("yt-dlp.exe", "deno.exe", "ffmpeg.exe", "ffprobe.exe");
+            if (missing != null)
+            {
+                UI(delegate
+                {
+                    if (autoMode)
+                    {
+                        Log("ERROR: required files are missing: " + missing);
+                        Environment.ExitCode = 1;
+                        Close();
+                        return;
+                    }
+                    SetStatus("Required files are missing.");
+                    Log("ERROR: required files are missing: " + missing);
+                    MessageBox.Show(this,
+                        "Some required files are missing from this folder:\r\n\r\n" + missing +
+                        "\r\n\r\nPlease re-download the complete package:\r\n" +
+                        "https://github.com/efsierraa/video_downloader/releases",
+                        "Video Downloader", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    Close();
+                });
+                return;
+            }
 
             string version = GetYtDlpVersion();
             UI(delegate
@@ -263,6 +285,17 @@ class VideoDownloaderApp : Form
                 UI(delegate { EnableInputs(true); });
             }
         });
+    }
+
+    // Returns a comma-separated list of the given files that are NOT next
+    // to the exe, or null if all of them exist.
+    static string MissingFiles(params string[] names)
+    {
+        string missing = "";
+        foreach (string n in names)
+            if (!File.Exists(Path.Combine(ExeDir, n)))
+                missing += (missing.Length > 0 ? ", " : "") + n;
+        return missing.Length > 0 ? missing : null;
     }
 
     void DoAutoDownload()
@@ -361,6 +394,17 @@ class VideoDownloaderApp : Form
     {
         string cookies = Path.Combine(ExeDir, "cookies.txt");
         string userData = Path.Combine(ExeDir, "webview2-data");
+        string missing = MissingFiles("Microsoft.Web.WebView2.Core.dll",
+            "Microsoft.Web.WebView2.WinForms.dll", "WebView2Loader.dll");
+        if (missing != null)
+        {
+            MessageBox.Show(this,
+                "The login window needs these files, which are missing:\r\n\r\n" + missing +
+                "\r\n\r\nPlease re-download the complete package:\r\n" +
+                "https://github.com/efsierraa/video_downloader/releases",
+                "Video Downloader", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return;
+        }
         try
         {
             using (FacebookLoginForm f = new FacebookLoginForm(cookies, userData))
@@ -576,176 +620,6 @@ class VideoDownloaderApp : Form
         if (double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out v))
             return v;
         return 0;
-    }
-
-    // ========================================================================
-    //  First-time setup: download yt-dlp / deno / ffmpeg if missing
-    // ========================================================================
-    void EnsureTools()
-    {
-        bool needYtDlp  = !File.Exists(YtDlp);
-        bool needDeno   = !File.Exists(Deno);
-        bool needFfmpeg = !File.Exists(Ffmpeg) || !File.Exists(Ffprobe);
-
-        if (!needYtDlp && !needDeno && !needFfmpeg) return;
-
-        SetStatus("First-time setup: downloading required tools...");
-        Log("Some required tools are missing. Downloading them now (one-time setup)...");
-
-        string tmp = Path.Combine(Path.GetTempPath(),
-            "getvideo-setup-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tmp);
-
-        try
-        {
-            if (needYtDlp)
-            {
-                Log("  -> yt-dlp.exe");
-                DownloadFile(
-                    "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
-                    YtDlp, "yt-dlp.exe");
-            }
-
-            if (needDeno)
-            {
-                Log("  -> deno.exe");
-                string zip = Path.Combine(tmp, "deno.zip");
-                DownloadFile(
-                    "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip",
-                    zip, "deno.zip");
-                ExtractEntry(zip, "deno.exe", Deno);
-            }
-
-            if (needFfmpeg)
-            {
-                Log("  -> ffmpeg.exe + ffprobe.exe (large download, please wait)");
-                string zip = Path.Combine(tmp, "ffmpeg.zip");
-                DownloadFile(
-                    "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
-                    zip, "ffmpeg.zip");
-                ExtractEntry(zip, "ffmpeg.exe", Ffmpeg);
-                ExtractEntry(zip, "ffprobe.exe", Ffprobe);
-            }
-
-            Log("Setup complete.");
-            SetStatus("Setup complete.");
-            SetProgress(0);
-        }
-        finally
-        {
-            try { Directory.Delete(tmp, true); } catch { }
-        }
-    }
-
-    void EnsureWebView2()
-    {
-        string wv2Core     = Path.Combine(ExeDir, "Microsoft.Web.WebView2.Core.dll");
-        string wv2WinForms = Path.Combine(ExeDir, "Microsoft.Web.WebView2.WinForms.dll");
-        string wv2Loader   = Path.Combine(ExeDir, "WebView2Loader.dll");
-        string wv2Stamp    = Path.Combine(ExeDir, "webview2-ok.txt");
-
-        // The stamp file marks a known-good download. Older versions of this
-        // app extracted the WebView2 package matching by file name only and
-        // could pick the WRONG build of the DLLs (UAP/.NET Core instead of
-        // .NET Framework), which breaks the login window with errors like
-        // "Could not load file or assembly System.ComponentModel.Primitives".
-        // Missing stamp = download again with the correct paths.
-        bool needWv2 = !File.Exists(wv2Core) || !File.Exists(wv2WinForms) ||
-                       !File.Exists(wv2Loader) || !File.Exists(wv2Stamp);
-        if (!needWv2) return;
-
-        SetStatus("Downloading WebView2 components (one-time setup)...");
-        Log("Downloading WebView2 components...");
-
-        string tmp = Path.Combine(Path.GetTempPath(),
-            "wv2setup-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tmp);
-
-        try
-        {
-            string zip = Path.Combine(tmp, "webview2.nupkg");
-            DownloadFile(
-                "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2",
-                zip, "WebView2 SDK");
-
-            using (ZipArchive archive = ZipFile.OpenRead(zip))
-            {
-                foreach (ZipArchiveEntry entry in archive.Entries)
-                {
-                    // Match by FULL path inside the package: it contains
-                    // several builds of the same DLL (net462, netcoreapp3.0,
-                    // UAP x86/x64/arm64) and only the net462 build and the
-                    // x64 loader work with this app.
-                    string fn = entry.FullName.Replace('\\', '/');
-                    if (string.Equals(fn, "lib/net462/Microsoft.Web.WebView2.Core.dll",
-                            StringComparison.OrdinalIgnoreCase))
-                        entry.ExtractToFile(wv2Core, true);
-                    else if (string.Equals(fn, "lib/net462/Microsoft.Web.WebView2.WinForms.dll",
-                            StringComparison.OrdinalIgnoreCase))
-                        entry.ExtractToFile(wv2WinForms, true);
-                    else if (string.Equals(fn, "runtimes/win-x64/native/WebView2Loader.dll",
-                            StringComparison.OrdinalIgnoreCase))
-                        entry.ExtractToFile(wv2Loader, true);
-                }
-            }
-
-            File.WriteAllText(wv2Stamp, "net462");
-
-            Log("WebView2 components ready.");
-            SetStatus("WebView2 components ready.");
-            SetProgress(0);
-        }
-        finally
-        {
-            try { Directory.Delete(tmp, true); } catch { }
-        }
-    }
-
-    void DownloadFile(string url, string destPath, string label)
-    {
-        using (WebClient wc = new WebClient())
-        using (ManualResetEventSlim done = new ManualResetEventSlim(false))
-        {
-            Exception failure = null;
-            int lastPct = -1;
-
-            wc.DownloadProgressChanged += delegate(object s, DownloadProgressChangedEventArgs e)
-            {
-                if (e.ProgressPercentage != lastPct)
-                {
-                    lastPct = e.ProgressPercentage;
-                    SetProgress(e.ProgressPercentage);
-                    SetStatus("Downloading " + label + "... " + e.ProgressPercentage + "%");
-                }
-            };
-            wc.DownloadFileCompleted += delegate(object s, AsyncCompletedEventArgs e)
-            {
-                failure = e.Error;
-                done.Set();
-            };
-
-            wc.DownloadFileAsync(new Uri(url), destPath);
-            done.Wait();
-
-            if (failure != null) throw failure;
-        }
-    }
-
-    static void ExtractEntry(string zipPath, string entryName, string destPath)
-    {
-        using (ZipArchive zip = ZipFile.OpenRead(zipPath))
-        {
-            foreach (ZipArchiveEntry entry in zip.Entries)
-            {
-                if (string.Equals(entry.Name, entryName, StringComparison.OrdinalIgnoreCase))
-                {
-                    entry.ExtractToFile(destPath, true);
-                    return;
-                }
-            }
-        }
-        throw new FileNotFoundException(
-            entryName + " not found inside " + Path.GetFileName(zipPath));
     }
 
     string GetYtDlpVersion()

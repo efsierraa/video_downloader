@@ -8,16 +8,12 @@
 //
 // Compile (no Visual Studio needed):
 //   C:\Windows\Microsoft.NET\Framework64\v4.0.30319\csc.exe /nologo /target:exe ^
-//     /out:VideoDownloader.exe /r:System.IO.Compression.dll ^
-//     /r:System.IO.Compression.FileSystem.dll VideoDownloader.cs
+//     /out:VideoDownloader.exe VideoDownloader.cs
 
 using System;
-using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
 using System.Net;
-using System.Threading;
 
 class VideoDownloader
 {
@@ -51,15 +47,18 @@ class VideoDownloader
                 url = a;
         }
 
-        try
-        {
-            InstallMissingTools();
-        }
-        catch (Exception ex)
+        // The app never downloads anything itself: every tool it needs ships
+        // next to the exe in the release zip. (Only "yt-dlp -U" downloads,
+        // and that is yt-dlp updating itself.)
+        string missing = MissingFiles("yt-dlp.exe", "deno.exe", "ffmpeg.exe", "ffprobe.exe");
+        if (missing != null)
         {
             WriteColor(ConsoleColor.Red,
-                "\nCould not download the required tools. Check your internet connection and try again.");
-            WriteColor(ConsoleColor.Red, ex.Message);
+                "Some required files are missing from this folder: " + missing);
+            Console.WriteLine();
+            Console.WriteLine("Re-download the complete package from:");
+            Console.WriteLine("  https://github.com/efsierraa/video_downloader/releases");
+            Console.WriteLine("Or run Get-Video.ps1 once -- it downloads the missing tools for you.");
             PauseIfInteractive(args);
             return 1;
         }
@@ -117,108 +116,15 @@ class VideoDownloader
         return code;
     }
 
-    // Downloads yt-dlp.exe, deno.exe, ffmpeg.exe and ffprobe.exe into the
-    // program folder if any of them are missing (same as Get-Video.ps1).
-    static void InstallMissingTools()
+    // Returns a comma-separated list of the given files that are NOT next
+    // to the exe, or null if all of them exist.
+    static string MissingFiles(params string[] names)
     {
-        bool needYtDlp  = !File.Exists(YtDlp);
-        bool needDeno   = !File.Exists(Deno);
-        bool needFfmpeg = !File.Exists(Ffmpeg) || !File.Exists(Ffprobe);
-
-        if (!needYtDlp && !needDeno && !needFfmpeg) return;
-
-        WriteColor(ConsoleColor.Yellow,
-            "Some required tools are missing. Downloading them now (one-time setup)...");
-
-        string tmp = Path.Combine(Path.GetTempPath(),
-            "getvideo-setup-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(tmp);
-
-        try
-        {
-            if (needYtDlp)
-            {
-                WriteColor(ConsoleColor.DarkGray, "  -> yt-dlp.exe");
-                DownloadFile(
-                    "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe",
-                    YtDlp, "yt-dlp.exe");
-            }
-
-            if (needDeno)
-            {
-                WriteColor(ConsoleColor.DarkGray, "  -> deno.exe");
-                string zip = Path.Combine(tmp, "deno.zip");
-                DownloadFile(
-                    "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip",
-                    zip, "deno.zip");
-                ExtractEntry(zip, "deno.exe", Deno);
-            }
-
-            if (needFfmpeg)
-            {
-                WriteColor(ConsoleColor.DarkGray,
-                    "  -> ffmpeg.exe + ffprobe.exe (large download, please wait)");
-                string zip = Path.Combine(tmp, "ffmpeg.zip");
-                DownloadFile(
-                    "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip",
-                    zip, "ffmpeg.zip");
-                ExtractEntry(zip, "ffmpeg.exe", Ffmpeg);
-                ExtractEntry(zip, "ffprobe.exe", Ffprobe);
-            }
-
-            WriteColor(ConsoleColor.Green, "Setup complete.");
-        }
-        finally
-        {
-            try { Directory.Delete(tmp, true); } catch { }
-        }
-    }
-
-    static void DownloadFile(string url, string destPath, string label)
-    {
-        using (WebClient wc = new WebClient())
-        using (ManualResetEventSlim done = new ManualResetEventSlim(false))
-        {
-            Exception failure = null;
-            int lastPct = -1;
-
-            wc.DownloadProgressChanged += delegate(object s, DownloadProgressChangedEventArgs e)
-            {
-                if (e.ProgressPercentage != lastPct)
-                {
-                    lastPct = e.ProgressPercentage;
-                    Console.Write("\r    {0} {1}%  ", label, e.ProgressPercentage);
-                }
-            };
-            wc.DownloadFileCompleted += delegate(object s, AsyncCompletedEventArgs e)
-            {
-                failure = e.Error;
-                done.Set();
-            };
-
-            wc.DownloadFileAsync(new Uri(url), destPath);
-            done.Wait();
-
-            Console.Write("\r                                        \r");
-            if (failure != null) throw failure;
-        }
-    }
-
-    static void ExtractEntry(string zipPath, string entryName, string destPath)
-    {
-        using (ZipArchive zip = ZipFile.OpenRead(zipPath))
-        {
-            foreach (ZipArchiveEntry entry in zip.Entries)
-            {
-                if (string.Equals(entry.Name, entryName, StringComparison.OrdinalIgnoreCase))
-                {
-                    entry.ExtractToFile(destPath, true);
-                    return;
-                }
-            }
-        }
-        throw new FileNotFoundException(
-            entryName + " not found inside " + Path.GetFileName(zipPath));
+        string missing = "";
+        foreach (string n in names)
+            if (!File.Exists(Path.Combine(ExeDir, n)))
+                missing += (missing.Length > 0 ? ", " : "") + n;
+        return missing.Length > 0 ? missing : null;
     }
 
     static int RunProcess(string exe, string arguments)
