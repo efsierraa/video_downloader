@@ -63,7 +63,7 @@ $Refs = @(
     "/r:$(Join-Path $PSScriptRoot 'Microsoft.Web.WebView2.WinForms.dll')"
 )
 
-& $Csc /nologo /target:winexe /utf8output "/out:$Output" @Refs "$Source"
+& $Csc /nologo /target:winexe /utf8output "/win32icon:$PSScriptRoot\icon.ico" "/out:$Output" @Refs "$Source"
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Built: $Output" -ForegroundColor Green

@@ -85,6 +85,8 @@ class VideoDownloaderApp : Form
     public VideoDownloaderApp()
     {
         defaultOutDir = Path.Combine(ExeDir, "downloads");
+        try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(
+            System.Reflection.Assembly.GetExecutingAssembly().Location); } catch { }
         BuildUi();
         Log("Ready. Paste a video URL and click Download.");
     }
@@ -121,9 +123,7 @@ class VideoDownloaderApp : Form
         txtOut = new TextBox();
         txtOut.Location = new Point(90, 46);
         txtOut.Size = new Size(322, 23);
-        txtOut.ReadOnly = true;
         txtOut.Text = defaultOutDir;
-        txtOut.BackColor = SystemColors.Window;
         Controls.Add(txtOut);
 
         btnBrowse = new Button();
@@ -245,6 +245,7 @@ class VideoDownloaderApp : Form
         RunBackground(delegate
         {
             EnsureTools();
+            EnsureWebView2();
 
             string version = GetYtDlpVersion();
             UI(delegate
@@ -285,12 +286,23 @@ class VideoDownloaderApp : Form
     // ========================================================================
     void btnBrowse_Click(object sender, EventArgs e)
     {
-        using (FolderBrowserDialog dlg = new FolderBrowserDialog())
+        using (SaveFileDialog dlg = new SaveFileDialog())
         {
-            dlg.Description = "Choose where to save the videos";
-            dlg.SelectedPath = txtOut.Text;
+            dlg.Title = "Save video as...";
+            dlg.Filter = "Video files (*.mp4;*.mkv;*.webm;*.avi)|*.mp4;*.mkv;*.webm;*.avi|All files (*.*)|*.*";
+            dlg.DefaultExt = "mp4";
+            string cur = txtOut.Text.Trim();
+            if (Directory.Exists(cur))
+                dlg.InitialDirectory = cur;
+            else if (Directory.Exists(Path.GetDirectoryName(cur)))
+            {
+                dlg.InitialDirectory = Path.GetDirectoryName(cur);
+                dlg.FileName = Path.GetFileName(cur);
+            }
+            else
+                dlg.InitialDirectory = defaultOutDir;
             if (dlg.ShowDialog(this) == DialogResult.OK)
-                txtOut.Text = dlg.SelectedPath;
+                txtOut.Text = dlg.FileName;
         }
     }
 
@@ -416,8 +428,18 @@ class VideoDownloaderApp : Form
 
     int RunDownload(string url, string outDir, string formatArgs)
     {
+        string outTemplate;
+        if (Path.GetExtension(outDir).Length > 0)
+        {
+            outTemplate = Path.Combine(Path.GetDirectoryName(outDir),
+                Path.GetFileNameWithoutExtension(outDir) + ".%(ext)s");
+            outDir = Path.GetDirectoryName(outDir);
+        }
+        else
+        {
+            outTemplate = Path.Combine(outDir, "%(title)s.%(ext)s");
+        }
         Directory.CreateDirectory(outDir);
-        string outTemplate = Path.Combine(outDir, "%(title)s.%(ext)s");
 
         StringBuilder sb = new StringBuilder();
         if (File.Exists(Deno))
@@ -615,6 +637,56 @@ class VideoDownloaderApp : Form
         }
     }
 
+    void EnsureWebView2()
+    {
+        string wv2Core     = Path.Combine(ExeDir, "Microsoft.Web.WebView2.Core.dll");
+        string wv2WinForms = Path.Combine(ExeDir, "Microsoft.Web.WebView2.WinForms.dll");
+        string wv2Loader   = Path.Combine(ExeDir, "WebView2Loader.dll");
+
+        if (File.Exists(wv2Core) && File.Exists(wv2WinForms) && File.Exists(wv2Loader))
+            return;
+
+        SetStatus("Downloading WebView2 components (one-time setup)...");
+        Log("WebView2 components missing. Downloading now...");
+
+        string tmp = Path.Combine(Path.GetTempPath(),
+            "wv2setup-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(tmp);
+
+        try
+        {
+            string zip = Path.Combine(tmp, "webview2.nupkg");
+            DownloadFile(
+                "https://www.nuget.org/api/v2/package/Microsoft.Web.WebView2",
+                zip, "WebView2 SDK");
+
+            using (ZipArchive archive = ZipFile.OpenRead(zip))
+            {
+                foreach (ZipArchiveEntry entry in archive.Entries)
+                {
+                    string name = entry.Name;
+                    if (string.Equals(name, "Microsoft.Web.WebView2.Core.dll",
+                        StringComparison.OrdinalIgnoreCase))
+                        entry.ExtractToFile(wv2Core, true);
+                    else if (string.Equals(name, "Microsoft.Web.WebView2.WinForms.dll",
+                        StringComparison.OrdinalIgnoreCase))
+                        entry.ExtractToFile(wv2WinForms, true);
+                    else if (string.Equals(name, "WebView2Loader.dll",
+                        StringComparison.OrdinalIgnoreCase))
+                        entry.ExtractToFile(wv2Loader, true);
+                }
+            }
+
+            Log("WebView2 components ready.");
+            SetStatus("WebView2 components ready.");
+            SetProgress(0);
+        }
+        finally
+        {
+            try { Directory.Delete(tmp, true); } catch { }
+        }
+    }
+
     void DownloadFile(string url, string destPath, string label)
     {
         using (WebClient wc = new WebClient())
@@ -777,6 +849,9 @@ class FacebookLoginForm : Form
     {
         this.cookiesPath = cookiesPath;
         this.userDataFolder = userDataFolder;
+
+        try { Icon = System.Drawing.Icon.ExtractAssociatedIcon(
+            System.Reflection.Assembly.GetExecutingAssembly().Location); } catch { }
 
         Text = "Facebook login";
         ClientSize = new Size(860, 640);
