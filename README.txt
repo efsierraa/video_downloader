@@ -45,13 +45,77 @@ To update the downloader engine, run this in PowerShell:
 
     .\VideoDownloader.exe -u
 
-Everything below describes the PowerShell version (Get-Video.ps1),
-which does the same thing and offers more options.
+
+----------------------------------------------------------------------
+ANTIVIRUS WARNING (FALSE POSITIVE)
+----------------------------------------------------------------------
+
+   Windows Defender (or another antivirus) may flag the .exe files
+   with a name like "Trojan:Win32/Sabsik.FL.A!ml". This is a FALSE
+   POSITIVE: the detection is a machine-learning guess, not an
+   actual virus.
+
+   Why it happens: the app is NOT digitally signed. A code-signing
+   certificate costs money every year, and this is a free tool, so
+   it is not signed for economical reasons. Unsigned apps that
+   download and run helper programs (like this one does -- see the
+   next section) look suspicious to antivirus software, so they
+   sometimes block them "just in case".
+
+   THE SOLUTION: tell your antivirus to trust the app. In Windows
+   Security, go to:
+       Virus & threat protection > Manage settings >
+       Exclusions > Add an exclusion > Folder
+   and pick this folder. Then unzip/copy the app again.
+
+   If you prefer not to trust an .exe at all, you can ALWAYS use
+   the script version instead: Get-Video.ps1 (instructions below).
+   It is a plain text file -- open it in Notepad and you can read
+   exactly what it does. It does the same job as the .exe files.
+
+   You can also upload the .exe files to www.virustotal.com --
+   the large majority of antivirus engines report them as clean.
+
+
+----------------------------------------------------------------------
+WHAT GETS DOWNLOADED (AND WHY)
+----------------------------------------------------------------------
+
+   The first time you run the app or the script, it downloads a
+   few helper programs into this folder. This is normal and only
+   happens once. Here is what they are and why they are needed:
+
+   - yt-dlp.exe   The actual video downloader. This tool is just
+                  a friendly front-end around yt-dlp, a well-known
+                  open-source project (github.com/yt-dlp/yt-dlp).
+
+   - deno.exe     A JavaScript runtime. YouTube "scrambles" its
+                  video URLs with JavaScript, and yt-dlp uses deno
+                  to unscramble them. Without it, YouTube
+                  downloads fail.
+
+   - ffmpeg.exe + ffprobe.exe
+                  Video/audio tools. Most videos download as
+                  separate video and audio streams, and ffmpeg
+                  merges them into one file. It also converts the
+                  audio to MP3 when you pick "Audio only".
+
+   - WebView2 components (3 .dll files, windowed app only)
+                  A small Microsoft browser used by the "Facebook
+                  login..." window, so you can log in to Facebook
+                  and download videos that need a login.
+
+   Everything is downloaded from the official download locations
+   of each project (github.com, nuget.org, gyan.dev). Nothing
+   else is installed and everything stays inside this folder.
 
 
 ----------------------------------------------------------------------
 HOW TO START (one-time setup)
 ----------------------------------------------------------------------
+
+Everything below describes the PowerShell version (Get-Video.ps1),
+which does the same thing and offers more options.
 
 Step 1:  Open this folder in File Explorer (the yellow folder icon).
          You should see the files: Get-Video.ps1, yt-dlp.exe, etc.
