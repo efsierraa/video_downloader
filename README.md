@@ -1,0 +1,197 @@
+# 🎬 Video Downloader
+
+> Download videos from **Facebook** and **YouTube** — no install, no setup.  
+> Everything is portable and lives right in this folder.
+
+---
+
+Made with ❤️ for **Mariana**
+
+---
+
+## 🖥️ Easiest way — the windowed app
+
+Double-click **Video Downloader.exe**, paste a URL, and click Download.
+
+1. Open **Video Downloader.exe**
+2. Paste the video URL into the top box (Ctrl+V works)
+3. Click the big **Download** button and wait for the progress bar
+4. The video lands in the `downloads` folder — the app offers to open it for you
+
+**Extra controls:**
+
+| Button / Option | What it does |
+|---|---|
+| **Browse…** | Pick where to save the video (folder + file name) |
+| **Quality** list | Choose 1080p / 720p / 480p, or **Audio only (MP3)** |
+| **Update yt-dlp** | Refresh the download engine if sites ever stop working |
+| **Facebook login…** | Log into Facebook so the app can download private videos |
+
+> The very first run downloads a few helpers automatically (see [what gets downloaded](#-what-gets-downloaded-and-why)).  
+> It takes a couple of minutes and only happens once.
+
+---
+
+## ⚡ Alternative — the console app
+
+For a quick, no-frills download:
+
+1. Double-click **VideoDownloader.exe** (the one with the black icon)
+2. Paste the URL (right-click → paste) and press Enter
+3. The video is saved in `downloads`
+
+To update the engine from the console:
+
+```
+.\VideoDownloader.exe -u
+```
+
+---
+
+## 📜 PowerShell script
+
+The script version does everything the apps do, but as a readable text file you can inspect.
+
+### One-time setup
+
+Open **PowerShell** inside this folder:
+
+- **Windows 10:** Shift + right-click on empty space → *Open PowerShell window here*
+- **Windows 11:** Shift + right-click on empty space → *Open in Terminal*
+
+Then run this once (type **Y** when asked):
+
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```
+
+### Download a video
+
+```powershell
+.\Get-Video.ps1 "https://www.youtube.com/watch?v=jNQXAC9IVRw"
+```
+
+Or run without a URL to be prompted:
+
+```powershell
+.\Get-Video.ps1
+```
+
+### Save somewhere else
+
+```powershell
+.\Get-Video.ps1 "URL" -OutputDir "D:\MyVideos"
+```
+
+### Update the engine
+
+```powershell
+.\Get-Video.ps1 -Update
+```
+
+---
+
+## 🔑 Facebook login (for videos that need it)
+
+Most Facebook videos need you to be logged in. The windowed app handles this in one click:
+
+1. Open **Video Downloader.exe**
+2. Click **Facebook login…** at the bottom
+3. A real Facebook window opens — log in with your account
+4. Click **Save cookies & Close**
+5. Try the download again
+
+The button changes to **Facebook login (saved)** when it's ready.
+
+Your login lives only in this folder (`cookies.txt` + `webview2-data\`) and is never shared.  
+⚠️ **Never share `cookies.txt`** — it's like a password.
+
+> The console app and the PowerShell script also use `cookies.txt` automatically if it exists.
+
+### No app? Create cookies.txt by hand
+
+If your antivirus blocks the exe completely:
+
+1. In your browser, install the **"Get cookies.txt LOCALLY"** extension
+2. Go to **www.facebook.com** and log in
+3. Click the extension icon → export cookies
+4. Save the file as **cookies.txt** in this folder
+
+The script and the apps pick it up on the next download.
+
+---
+
+## 🧰 What gets downloaded (and why)
+
+On first run the app fetches a few helpers — one time only, from their official download pages.
+
+| File | Why |
+|---|---|
+| **yt-dlp.exe** | The actual video downloader engine ([github.com/yt-dlp/yt-dlp](https://github.com/yt-dlp/yt-dlp)) |
+| **deno.exe** | JavaScript runtime — YouTube scrambles URLs with JS, and yt-dlp uses this to unscramble them |
+| **ffmpeg.exe + ffprobe.exe** | Merges video + audio streams into one file; also converts to MP3 |
+| **WebView2 DLLs** (3 files) | A tiny Microsoft browser for the Facebook login window (GUI app only) |
+
+Everything lands inside this folder and nothing is installed system-wide.
+
+---
+
+## ⚠️ Antivirus false positive
+
+Windows Defender may flag the `.exe` files with names like **Trojan:Win32/Sabsik.FL.A!ml**.
+
+**This is a false positive** — the detection is an ML-based guess, not an actual virus. It happens because:
+
+- The app is **not digitally signed** (a signing certificate costs money every year, and this is a free tool)
+- Unsigned programs that download helper tools look suspicious to antivirus heuristics
+
+### The fix
+
+Add this folder to your antivirus exclusions:
+
+> Windows Security → Virus & threat protection → Manage settings → **Exclusions** → Add this folder
+
+### Don't trust an .exe? Use the script instead
+
+`Get-Video.ps1` is a plain text file — open it in Notepad and read every line. It does exactly the same job.
+
+You can also verify the `.exe` files at [virustotal.com](https://www.virustotal.com) — the vast majority of engines report them as clean.
+
+---
+
+## 📝 Notes
+
+- If any helper gets deleted, it re-downloads automatically on next run
+- Long videos may take a few minutes
+- Private/unlisted Facebook videos may not work
+- Age-restricted YouTube videos may need a login (try a different one)
+
+---
+
+## 📄 License
+
+MIT — do whatever you want with it. The source code is in this folder.
+
+```
+MIT License
+
+Copyright (c) 2026
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
