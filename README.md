@@ -18,6 +18,7 @@ The windowed app has a clean Apple-inspired interface with:
 - A responsive layout that adapts when the window is resized
 - A slim progress bar with clear download status
 - A collapsible **Show details** panel for technical logs
+- A **Dark mode** / **Light mode** button to switch themes instantly
 - A matching dark title bar when Windows supports it
 
 To override the Windows theme, run one of these commands from PowerShell:
@@ -50,6 +51,8 @@ Double-click **Video Downloader.exe**, paste a URL, and click Download.
 | **Facebook login…** | Log into Facebook so the app can download private videos |
 
 The window is resizable and automatically matches your Windows light/dark theme.
+Use the **Dark mode** / **Light mode** button in the footer to switch themes
+without restarting the app.
 Click **Show details ▾** beneath the progress area whenever you want to see
 the technical download log.
 
