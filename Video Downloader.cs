@@ -5,6 +5,7 @@
 //
 // Command line (optional, used for unattended downloads and testing):
 //   "Video Downloader.exe" --url <url> --out <dir> --quality best|1080p|720p|480p|mp3 --auto
+//   --theme light|dark   forces a theme (default: follow the Windows setting)
 //
 // Compile (no Visual Studio needed):
 //   .\Build-App.ps1
@@ -17,6 +18,7 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
+using System.Drawing.Drawing2D;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -47,17 +49,26 @@ class VideoDownloaderApp : Form
         @"\[download\]\s+(\d+(?:\.\d+)?)%", RegexOptions.Compiled);
 
     // ---- UI controls -------------------------------------------------------
-    TextBox txtUrl;
-    TextBox txtOut;
-    ComboBox cmbQuality;
-    Button btnBrowse;
-    Button btnDownload;
-    Button btnUpdate;
-    Button btnFbLogin;
-    ProgressBar progress;
+    AppleTextBox txtUrl;
+    AppleTextBox txtOut;
+    AppleComboBox cmbQuality;
+    AppleButton btnBrowse;
+    AppleButton btnDownload;
+    AppleButton btnUpdate;
+    AppleButton btnFbLogin;
+    AppleProgressBar progress;
     Label lblStatus;
     Label lblVersion;
     TextBox txtLog;
+
+    // ---- Layout state ------------------------------------------------------
+    TableLayoutPanel layout;
+    Panel logCard;
+    Label lblDetails;
+    int logRowIndex;
+    bool showDetails;
+    int compactHeight;
+    bool heightRecorded;
 
     // ---- State -------------------------------------------------------------
     string defaultOutDir;
@@ -74,6 +85,7 @@ class VideoDownloaderApp : Form
         Application.EnableVisualStyles();
         Application.SetCompatibleTextRenderingDefault(false);
 
+        Theme.Init(args);
         VideoDownloaderApp form = new VideoDownloaderApp();
         form.ParseArgs(args);
         Application.Run(form);
@@ -90,114 +102,238 @@ class VideoDownloaderApp : Form
     }
 
     // ========================================================================
-    //  UI construction
+    //  UI construction (Apple-style, responsive)
     // ========================================================================
     void BuildUi()
     {
-        Font = new Font("Segoe UI", 9F);
+        Font = new Font("Segoe UI", 9.75F);
         Text = "Video Downloader";
-        ClientSize = new Size(520, 424);
-        FormBorderStyle = FormBorderStyle.FixedSingle;
-        MaximizeBox = false;
+        BackColor = Theme.Bg;
+        ForeColor = Theme.Text;
+        ClientSize = new Size(600, 432);
+        MinimumSize = new Size(520, 432);
+        FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
 
-        Label lblUrl = new Label();
-        lblUrl.Text = "Video URL:";
-        lblUrl.AutoSize = true;
-        lblUrl.Location = new Point(12, 16);
-        Controls.Add(lblUrl);
+        layout = new TableLayoutPanel();
+        layout.Dock = DockStyle.Fill;
+        layout.Padding = new Padding(18, 12, 18, 10);
+        layout.BackColor = Theme.Bg;
+        layout.ColumnCount = 1;
+        layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        Controls.Add(layout);
+        int row = 0;
 
-        txtUrl = new TextBox();
-        txtUrl.Location = new Point(90, 13);
-        txtUrl.Size = new Size(418, 23);
-        Controls.Add(txtUrl);
+        // ---- header ---------------------------------------------------------
+        Label lblTitle = new Label();
+        lblTitle.Text = "Video Downloader";
+        lblTitle.Font = new Font("Segoe UI", 14.25F, FontStyle.Bold);
+        lblTitle.ForeColor = Theme.Text;
+        lblTitle.AutoSize = true;
+        lblTitle.Margin = new Padding(2, 4, 0, 0);
+        layout.Controls.Add(lblTitle, 0, row++);
 
-        Label lblSave = new Label();
-        lblSave.Text = "Save to:";
-        lblSave.AutoSize = true;
-        lblSave.Location = new Point(12, 49);
-        Controls.Add(lblSave);
+        Label lblSubtitle = new Label();
+        lblSubtitle.Text = "Paste a link from Facebook or YouTube";
+        lblSubtitle.ForeColor = Theme.Sub;
+        lblSubtitle.AutoSize = true;
+        lblSubtitle.Margin = new Padding(2, 0, 0, 10);
+        layout.Controls.Add(lblSubtitle, 0, row++);
 
-        txtOut = new TextBox();
-        txtOut.Location = new Point(90, 46);
-        txtOut.Size = new Size(322, 23);
+        // ---- fields ----------------------------------------------------------
+        layout.Controls.Add(Caption("VIDEO URL"), 0, row++);
+
+        txtUrl = new AppleTextBox();
+        txtUrl.Dock = DockStyle.Fill;
+        txtUrl.Margin = new Padding(0, 0, 0, 4);
+        layout.Controls.Add(txtUrl, 0, row++);
+
+        layout.Controls.Add(Caption("SAVE TO"), 0, row++);
+
+        TableLayoutPanel saveRow = new TableLayoutPanel();
+        saveRow.Dock = DockStyle.Fill;
+        saveRow.AutoSize = true;
+        saveRow.Margin = new Padding(0, 0, 0, 4);
+        saveRow.BackColor = Theme.Bg;
+        saveRow.ColumnCount = 2;
+        saveRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        saveRow.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        saveRow.RowCount = 1;
+        txtOut = new AppleTextBox();
+        txtOut.Dock = DockStyle.Fill;
         txtOut.Text = defaultOutDir;
-        Controls.Add(txtOut);
-
-        btnBrowse = new Button();
+        txtOut.Margin = new Padding(0, 0, 8, 0);
+        saveRow.Controls.Add(txtOut, 0, 0);
+        btnBrowse = new AppleButton();
         btnBrowse.Text = "Browse...";
-        btnBrowse.Location = new Point(418, 45);
-        btnBrowse.Size = new Size(90, 25);
+        btnBrowse.Size = new Size(96, 30);
+        btnBrowse.Margin = new Padding(0);
         btnBrowse.Click += btnBrowse_Click;
-        Controls.Add(btnBrowse);
+        saveRow.Controls.Add(btnBrowse, 1, 0);
+        layout.Controls.Add(saveRow, 0, row++);
 
-        Label lblQuality = new Label();
-        lblQuality.Text = "Quality:";
-        lblQuality.AutoSize = true;
-        lblQuality.Location = new Point(12, 82);
-        Controls.Add(lblQuality);
+        layout.Controls.Add(Caption("QUALITY"), 0, row++);
 
-        cmbQuality = new ComboBox();
-        cmbQuality.Location = new Point(90, 79);
-        cmbQuality.Size = new Size(180, 23);
-        cmbQuality.DropDownStyle = ComboBoxStyle.DropDownList;
+        cmbQuality = new AppleComboBox();
         cmbQuality.Items.AddRange(QualityLabels);
         cmbQuality.SelectedIndex = 0;
-        Controls.Add(cmbQuality);
+        cmbQuality.Size = new Size(220, 30);
+        cmbQuality.Margin = new Padding(0, 0, 0, 4);
+        cmbQuality.Anchor = AnchorStyles.Left;
+        layout.Controls.Add(cmbQuality, 0, row++);
 
-        btnDownload = new Button();
+        // ---- download ----------------------------------------------------------
+        btnDownload = new AppleButton();
         btnDownload.Text = "Download";
-        btnDownload.Font = new Font(Font, FontStyle.Bold);
-        btnDownload.Location = new Point(12, 114);
-        btnDownload.Size = new Size(496, 42);
+        btnDownload.Accent = true;
+        btnDownload.Font = new Font("Segoe UI", 11F, FontStyle.Bold);
+        btnDownload.Dock = DockStyle.Fill;
+        btnDownload.Height = 44;
+        btnDownload.Margin = new Padding(0, 10, 0, 10);
         btnDownload.Click += btnDownload_Click;
-        Controls.Add(btnDownload);
+        layout.Controls.Add(btnDownload, 0, row++);
         AcceptButton = btnDownload;
 
-        progress = new ProgressBar();
-        progress.Location = new Point(12, 168);
-        progress.Size = new Size(496, 20);
-        progress.Minimum = 0;
-        progress.Maximum = 1000;
-        Controls.Add(progress);
+        progress = new AppleProgressBar();
+        progress.Dock = DockStyle.Fill;
+        progress.Margin = new Padding(0, 0, 0, 6);
+        layout.Controls.Add(progress, 0, row++);
 
         lblStatus = new Label();
-        lblStatus.Location = new Point(12, 196);
-        lblStatus.Size = new Size(496, 20);
+        lblStatus.AutoSize = false;
+        lblStatus.Height = 20;
+        lblStatus.Dock = DockStyle.Fill;
         lblStatus.AutoEllipsis = true;
+        lblStatus.ForeColor = Theme.Sub;
+        lblStatus.Margin = new Padding(2, 0, 0, 4);
         lblStatus.Text = "";
-        Controls.Add(lblStatus);
+        layout.Controls.Add(lblStatus, 0, row++);
 
+        // ---- collapsible details --------------------------------------------
+        lblDetails = new Label();
+        lblDetails.Text = "Show details ▾";
+        lblDetails.ForeColor = Theme.Sub;
+        lblDetails.AutoSize = true;
+        lblDetails.Cursor = Cursors.Hand;
+        lblDetails.Margin = new Padding(2, 0, 0, 6);
+        lblDetails.Click += delegate { ToggleDetails(); };
+        lblDetails.MouseEnter += delegate { lblDetails.Font = new Font(lblDetails.Font, FontStyle.Underline); };
+        lblDetails.MouseLeave += delegate { lblDetails.Font = new Font(lblDetails.Font, FontStyle.Regular); };
+        layout.Controls.Add(lblDetails, 0, row++);
+
+        logCard = new Panel();
+        logCard.BackColor = Theme.Card;
+        logCard.Padding = new Padding(8);
+        logCard.Dock = DockStyle.Fill;
+        logCard.Margin = new Padding(0);
+        logCard.Visible = false;
         txtLog = new TextBox();
-        txtLog.Location = new Point(12, 222);
-        txtLog.Size = new Size(496, 150);
         txtLog.Multiline = true;
         txtLog.ReadOnly = true;
         txtLog.ScrollBars = ScrollBars.Vertical;
-        txtLog.Font = new Font("Consolas", 8.25F);
-        txtLog.BackColor = Color.White;
-        Controls.Add(txtLog);
+        txtLog.Font = new Font("Consolas", 8.5F);
+        txtLog.BackColor = Theme.Card;
+        txtLog.ForeColor = Theme.Sub;
+        txtLog.BorderStyle = BorderStyle.None;
+        txtLog.Dock = DockStyle.Fill;
+        logCard.Controls.Add(txtLog);
+        logRowIndex = row;
+        layout.Controls.Add(logCard, 0, row++);
+
+        // ---- footer ----------------------------------------------------------
+        TableLayoutPanel footer = new TableLayoutPanel();
+        footer.Dock = DockStyle.Fill;
+        footer.AutoSize = true;
+        footer.Margin = new Padding(0, 8, 0, 0);
+        footer.BackColor = Theme.Bg;
+        footer.ColumnCount = 2;
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        footer.RowCount = 1;
 
         lblVersion = new Label();
-        lblVersion.Location = new Point(12, 388);
-        lblVersion.AutoSize = true;
-        lblVersion.ForeColor = Color.Gray;
         lblVersion.Text = "yt-dlp ...";
-        Controls.Add(lblVersion);
+        lblVersion.ForeColor = Theme.Sub;
+        lblVersion.Font = new Font("Segoe UI", 8.25F);
+        lblVersion.AutoSize = true;
+        lblVersion.Anchor = AnchorStyles.Left | AnchorStyles.Bottom;
+        footer.Controls.Add(lblVersion, 0, 0);
 
-        btnUpdate = new Button();
-        btnUpdate.Text = "Update yt-dlp";
-        btnUpdate.Location = new Point(396, 382);
-        btnUpdate.Size = new Size(112, 28);
-        btnUpdate.Click += btnUpdate_Click;
-        Controls.Add(btnUpdate);
+        FlowLayoutPanel footerButtons = new FlowLayoutPanel();
+        footerButtons.FlowDirection = FlowDirection.LeftToRight;
+        footerButtons.AutoSize = true;
+        footerButtons.Margin = new Padding(0);
+        footerButtons.Padding = new Padding(0);
+        footerButtons.WrapContents = false;
+        footerButtons.BackColor = Theme.Bg;
 
-        btnFbLogin = new Button();
-        btnFbLogin.Location = new Point(238, 382);
-        btnFbLogin.Size = new Size(150, 28);
+        btnFbLogin = new AppleButton();
+        btnFbLogin.Size = new Size(170, 30);
+        btnFbLogin.Margin = new Padding(0, 0, 8, 0);
         btnFbLogin.Click += btnFbLogin_Click;
-        Controls.Add(btnFbLogin);
+        footerButtons.Controls.Add(btnFbLogin);
+
+        btnUpdate = new AppleButton();
+        btnUpdate.Text = "Update yt-dlp";
+        btnUpdate.Size = new Size(120, 30);
+        btnUpdate.Margin = new Padding(0);
+        btnUpdate.Click += btnUpdate_Click;
+        footerButtons.Controls.Add(btnUpdate);
+
+        footer.Controls.Add(footerButtons, 1, 0);
+        layout.Controls.Add(footer, 0, row++);
+
+        // All rows auto-size to their content, except the log row which
+        // fills the remaining space when expanded (and is 0 when collapsed).
+        layout.RowCount = row;
+        for (int i = 0; i < row; i++)
+            layout.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+        layout.RowStyles[logRowIndex] = new RowStyle(SizeType.Absolute, 0F);
+
+        ActiveControl = btnDownload; // keep focus out of the text fields
         UpdateFbLoginButton();
+    }
+
+    Label Caption(string text)
+    {
+        Label l = new Label();
+        l.Text = text;
+        l.Font = new Font("Segoe UI", 8F, FontStyle.Bold);
+        l.ForeColor = Theme.Sub;
+        l.AutoSize = true;
+        l.Margin = new Padding(2, 6, 0, 3);
+        return l;
+    }
+
+    void ToggleDetails()
+    {
+        showDetails = !showDetails;
+        logCard.Visible = showDetails;
+        layout.RowStyles[logRowIndex] = showDetails
+            ? new RowStyle(SizeType.Percent, 100F)
+            : new RowStyle(SizeType.Absolute, 0F);
+        lblDetails.Text = showDetails ? "Hide details ▴" : "Show details ▾";
+        const int grow = 180;
+        if (showDetails)
+            ClientSize = new Size(ClientSize.Width, ClientSize.Height + grow);
+        else
+            ClientSize = new Size(ClientSize.Width, compactHeight);
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        Theme.ApplyTitleBarTheme(Handle);
+    }
+
+    protected override void OnLayout(LayoutEventArgs levent)
+    {
+        base.OnLayout(levent);
+        if (!heightRecorded && !showDetails && ClientSize.Height > 0)
+        {
+            heightRecorded = true;
+            compactHeight = ClientSize.Height;
+        }
     }
 
     // ========================================================================
@@ -728,7 +864,7 @@ class VideoDownloaderApp : Form
 class FacebookLoginForm : Form
 {
     WebView2 web;
-    Button btnSave;
+    AppleButton btnSave;
     Label lblHint;
     string cookiesPath;
     string userDataFolder;
@@ -749,6 +885,8 @@ class FacebookLoginForm : Form
         Panel bottom = new Panel();
         bottom.Dock = DockStyle.Bottom;
         bottom.Height = 46;
+        bottom.BackColor = Theme.Bg;
+        bottom.Padding = new Padding(0, 8, 8, 8);
         Controls.Add(bottom);
 
         lblHint = new Label();
@@ -756,10 +894,13 @@ class FacebookLoginForm : Form
         lblHint.Dock = DockStyle.Fill;
         lblHint.TextAlign = ContentAlignment.MiddleLeft;
         lblHint.Padding = new Padding(8, 0, 0, 0);
+        lblHint.ForeColor = Theme.Text;
+        lblHint.BackColor = Theme.Bg;
         lblHint.Text = "Loading Facebook...";
         bottom.Controls.Add(lblHint);
 
-        btnSave = new Button();
+        btnSave = new AppleButton();
+        btnSave.Accent = true;
         btnSave.Text = "Save cookies && Close";
         btnSave.Dock = DockStyle.Right;
         btnSave.Width = 170;
@@ -771,6 +912,12 @@ class FacebookLoginForm : Form
         web.Dock = DockStyle.Fill;
         Controls.Add(web);
         web.BringToFront();
+    }
+
+    protected override void OnHandleCreated(EventArgs e)
+    {
+        base.OnHandleCreated(e);
+        Theme.ApplyTitleBarTheme(Handle);
     }
 
     protected override async void OnShown(EventArgs e)
@@ -850,6 +997,349 @@ class FacebookLoginForm : Form
             MessageBox.Show(this, "Could not save cookies:\r\n\r\n" + ex.Message,
                 "Facebook login", MessageBoxButtons.OK, MessageBoxIcon.Error);
             btnSave.Enabled = true;
+        }
+    }
+}
+
+// ============================================================================
+//  Theme: light/dark Apple-style palette (follows the Windows setting,
+//  override with --theme light|dark) plus drawing helpers.
+// ============================================================================
+static class Theme
+{
+    public static bool Dark;
+    public static Color Bg, Card, Text, Sub, Sep, Accent, ControlBg;
+
+    public static void Init(string[] args)
+    {
+        bool? forced = null;
+        for (int i = 0; i < args.Length - 1; i++)
+            if (args[i] == "--theme")
+                forced = args[i + 1].Equals("dark", StringComparison.OrdinalIgnoreCase);
+
+        if (forced.HasValue)
+        {
+            Dark = forced.Value;
+        }
+        else
+        {
+            Dark = false;
+            try
+            {
+                using (Microsoft.Win32.RegistryKey key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                    @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"))
+                {
+                    object v = key != null ? key.GetValue("AppsUseLightTheme") : null;
+                    if (v is int) Dark = (int)v == 0;
+                }
+            }
+            catch { }
+        }
+
+        if (Dark)
+        {
+            Bg        = Color.FromArgb(0x1C, 0x1C, 0x1E);
+            Card      = Color.FromArgb(0x2C, 0x2C, 0x2E);
+            Text      = Color.FromArgb(0xF2, 0xF2, 0xF7);
+            Sub       = Color.FromArgb(0x98, 0x98, 0x9D);
+            Sep       = Color.FromArgb(0x38, 0x38, 0x3A);
+            Accent    = Color.FromArgb(0xBF, 0x5A, 0xF2); // Apple purple (dark)
+            ControlBg = Color.FromArgb(0x3A, 0x3A, 0x3C);
+        }
+        else
+        {
+            Bg        = Color.FromArgb(0xF5, 0xF5, 0xF7);
+            Card      = Color.White;
+            Text      = Color.FromArgb(0x1D, 0x1D, 0x1F);
+            Sub       = Color.FromArgb(0x6E, 0x6E, 0x73);
+            Sep       = Color.FromArgb(0xD2, 0xD2, 0xD7);
+            Accent    = Color.FromArgb(0xAF, 0x52, 0xDE); // Apple purple (light)
+            ControlBg = Color.FromArgb(0xE8, 0xE8, 0xED);
+        }
+    }
+
+    // Lightens (positive delta) or darkens (negative) a color per channel.
+    public static Color Shift(Color c, int delta)
+    {
+        return Color.FromArgb(c.A,
+            Clamp(c.R + delta), Clamp(c.G + delta), Clamp(c.B + delta));
+    }
+
+    static int Clamp(int v) { return v < 0 ? 0 : (v > 255 ? 255 : v); }
+
+    public static GraphicsPath RoundedRect(Rectangle b, int radius)
+    {
+        int d = radius * 2;
+        if (d > b.Width) d = b.Width;
+        if (d > b.Height) d = b.Height;
+        GraphicsPath p = new GraphicsPath();
+        p.AddArc(b.X, b.Y, d, d, 180, 90);
+        p.AddArc(b.Right - d, b.Y, d, d, 270, 90);
+        p.AddArc(b.Right - d, b.Bottom - d, d, d, 0, 90);
+        p.AddArc(b.X, b.Bottom - d, d, d, 90, 90);
+        p.CloseFigure();
+        return p;
+    }
+
+    [System.Runtime.InteropServices.DllImport("dwmapi.dll")]
+    static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+
+    // Apply the Windows dark title bar for dark-theme forms.
+    public static void ApplyTitleBarTheme(IntPtr hwnd)
+    {
+        try
+        {
+            int dark = Dark ? 1 : 0;
+            // Attribute 20 = DWMWA_USE_IMMERSIVE_DARK_MODE (Win11 / Win10 20H1+)
+            // Attribute 19 = older build fallback (Win10 2004). Try both.
+            DwmSetWindowAttribute(hwnd, 20, ref dark, 4);
+            DwmSetWindowAttribute(hwnd, 19, ref dark, 4);
+        }
+        catch { }
+    }
+}
+
+// ============================================================================
+//  Rounded button with hover/pressed/disabled states.
+//  Accent = purple call-to-action, default = subtle gray.
+// ============================================================================
+class AppleButton : Button
+{
+    public bool Accent;
+    bool hover, pressed;
+
+    public AppleButton()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        FlatStyle = FlatStyle.Flat;
+        FlatAppearance.BorderSize = 0;
+        Font = new Font("Segoe UI", 9.75F);
+        Cursor = Cursors.Hand;
+        Size = new Size(100, 30);
+        BackColor = Theme.Bg;
+    }
+
+    protected override void OnMouseEnter(EventArgs e) { hover = true; Invalidate(); base.OnMouseEnter(e); }
+    protected override void OnMouseLeave(EventArgs e) { hover = false; pressed = false; Invalidate(); base.OnMouseLeave(e); }
+    protected override void OnMouseDown(MouseEventArgs e)
+    {
+        if (e.Button == MouseButtons.Left) { pressed = true; Invalidate(); }
+        base.OnMouseDown(e);
+    }
+    protected override void OnMouseUp(MouseEventArgs e) { pressed = false; Invalidate(); base.OnMouseUp(e); }
+    protected override void OnEnabledChanged(EventArgs e) { Invalidate(); base.OnEnabledChanged(e); }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using (SolidBrush bgBrush = new SolidBrush(Theme.Bg))
+            g.FillRectangle(bgBrush, 0, 0, Width, Height);
+
+        Color fill, text;
+        if (!Enabled)
+        {
+            fill = Theme.ControlBg;
+            text = Theme.Sub;
+        }
+        else if (Accent)
+        {
+            fill = Theme.Accent;
+            if (pressed) fill = Theme.Shift(fill, -40);
+            else if (hover) fill = Theme.Shift(fill, -18);
+            text = Color.White;
+        }
+        else
+        {
+            fill = Theme.ControlBg;
+            if (pressed) fill = Theme.Shift(fill, -30);
+            else if (hover) fill = Theme.Shift(fill, -14);
+            text = Theme.Text;
+        }
+
+        Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (GraphicsPath path = Theme.RoundedRect(r, 9))
+        using (SolidBrush br = new SolidBrush(fill))
+            g.FillPath(br, path);
+
+        TextRenderer.DrawText(g, Text, Font, r, text,
+            TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter |
+            TextFormatFlags.EndEllipsis);
+    }
+}
+
+// ============================================================================
+//  Rounded text field: borderless TextBox inside a painted card,
+//  with an accent focus ring.
+// ============================================================================
+class AppleTextBox : Panel
+{
+    public readonly TextBox Inner = new TextBox();
+    bool focused;
+
+    public AppleTextBox()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        Height = 30;
+        Padding = new Padding(10, 6, 10, 6);
+        Inner.BorderStyle = BorderStyle.None;
+        Inner.BackColor = Theme.Card;
+        Inner.ForeColor = Theme.Text;
+        Inner.Dock = DockStyle.Fill;
+        Inner.Enter += delegate { focused = true; Invalidate(); };
+        Inner.Leave += delegate { focused = false; Invalidate(); };
+        Controls.Add(Inner);
+    }
+
+    public override string Text
+    {
+        get { return Inner.Text; }
+        set { Inner.Text = value; }
+    }
+
+    protected override void OnEnabledChanged(EventArgs e)
+    {
+        base.OnEnabledChanged(e);
+        Inner.ForeColor = Enabled ? Theme.Text : Theme.Sub;
+        Invalidate();
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using (SolidBrush bgBrush = new SolidBrush(Theme.Bg))
+            g.FillRectangle(bgBrush, 0, 0, Width, Height);
+
+        Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (GraphicsPath path = Theme.RoundedRect(r, 8))
+        using (SolidBrush br = new SolidBrush(Theme.Card))
+            g.FillPath(br, path);
+        using (GraphicsPath path = Theme.RoundedRect(r, 8))
+        using (Pen pen = new Pen(focused ? Theme.Accent : Theme.Sep, focused ? 2F : 1F))
+            g.DrawPath(pen, path);
+    }
+}
+
+// ============================================================================
+//  Flat combo box with rounded card, chevron, and themed dropdown items.
+// ============================================================================
+class AppleComboBox : ComboBox
+{
+    public AppleComboBox()
+    {
+        DropDownStyle = ComboBoxStyle.DropDownList;
+        DrawMode = DrawMode.OwnerDrawFixed;
+        FlatStyle = FlatStyle.Flat;
+        Font = new Font("Segoe UI", 9.75F);
+        ItemHeight = 24;
+        BackColor = Theme.Card;
+        ForeColor = Theme.Text;
+        SetStyle(ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+    }
+
+    protected override void OnDrawItem(DrawItemEventArgs e)
+    {
+        if (e.Index < 0) return;
+        bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+        Color bg = selected ? Theme.Accent : Theme.Card;
+        Color fg = selected ? Color.White : Theme.Text;
+        using (SolidBrush br = new SolidBrush(bg))
+            e.Graphics.FillRectangle(br, e.Bounds);
+        TextRenderer.DrawText(e.Graphics, Items[e.Index].ToString(), Font,
+            new Rectangle(e.Bounds.X + 8, e.Bounds.Y, e.Bounds.Width - 16, e.Bounds.Height),
+            fg, TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+    }
+
+    // The native ComboBox paints its own arrow button, so OnPaint is not
+    // enough: repaint the whole face AFTER the native paint (WM_PAINT).
+    protected override void WndProc(ref Message m)
+    {
+        const int WM_PAINT = 0x000F;
+        base.WndProc(ref m);
+        if (m.Msg != WM_PAINT || !IsHandleCreated) return;
+        using (Graphics g = CreateGraphics())
+            PaintFace(g);
+    }
+
+    void PaintFace(Graphics g)
+    {
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using (SolidBrush bgBrush = new SolidBrush(Theme.Bg))
+            g.FillRectangle(bgBrush, 0, 0, Width, Height);
+
+        Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (GraphicsPath path = Theme.RoundedRect(r, 8))
+        using (SolidBrush br = new SolidBrush(Theme.Card))
+            g.FillPath(br, path);
+        using (GraphicsPath path = Theme.RoundedRect(r, 8))
+        using (Pen pen = new Pen(Theme.Sep, 1F))
+            g.DrawPath(pen, path);
+
+        string text = SelectedIndex >= 0 ? Items[SelectedIndex].ToString() : "";
+        TextRenderer.DrawText(g, text, Font, new Rectangle(10, 0, Width - 36, Height),
+            Enabled ? Theme.Text : Theme.Sub,
+            TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+
+        int cx = Width - 18, cy = Height / 2;
+        using (Pen pen = new Pen(Theme.Sub, 1.6F))
+        {
+            pen.StartCap = LineCap.Round;
+            pen.EndCap = LineCap.Round;
+            g.DrawLine(pen, cx - 5, cy - 2, cx, cy + 3);
+            g.DrawLine(pen, cx, cy + 3, cx + 5, cy - 2);
+        }
+    }
+}
+
+// ============================================================================
+//  Thin rounded progress bar with accent fill.
+// ============================================================================
+class AppleProgressBar : Control
+{
+    int _value;
+    public int Maximum;
+
+    public AppleProgressBar()
+    {
+        SetStyle(ControlStyles.AllPaintingInWmPaint | ControlStyles.UserPaint |
+                 ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+        Height = 6;
+        Maximum = 1000;
+    }
+
+    public int Value
+    {
+        get { return _value; }
+        set
+        {
+            _value = value < 0 ? 0 : (value > Maximum ? Maximum : value);
+            Invalidate();
+        }
+    }
+
+    protected override void OnPaint(PaintEventArgs e)
+    {
+        Graphics g = e.Graphics;
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        using (SolidBrush bgBrush = new SolidBrush(Theme.Bg))
+            g.FillRectangle(bgBrush, 0, 0, Width, Height);
+
+        Rectangle r = new Rectangle(0, 0, Width - 1, Height - 1);
+        using (GraphicsPath path = Theme.RoundedRect(r, 3))
+        using (SolidBrush br = new SolidBrush(Theme.Sep))
+            g.FillPath(br, path);
+
+        if (_value > 0 && Maximum > 0)
+        {
+            int w = (int)((long)(Width - 1) * _value / Maximum);
+            if (w < 6) w = 6;
+            if (w > Width - 1) w = Width - 1;
+            using (GraphicsPath path = Theme.RoundedRect(new Rectangle(0, 0, w, Height - 1), 3))
+            using (SolidBrush br = new SolidBrush(Theme.Accent))
+                g.FillPath(br, path);
         }
     }
 }

@@ -27,6 +27,9 @@ Double-click **Video Downloader.exe**, paste a URL, and click Download.
 | **Update yt-dlp** | Refresh the download engine if sites ever stop working |
 | **Facebook login…** | Log into Facebook so the app can download private videos |
 
+The window is resizable and automatically matches your Windows light/dark theme.  
+Add `--theme light` or `--theme dark` to override.
+
 > Everything the app needs is already in the zip — the app itself downloads nothing  
 > (which also keeps antivirus programs happy). See [the helper tools](#-helper-tools-already-included).
 
