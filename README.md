@@ -9,6 +9,28 @@ Made with ❤️ for **Mariana**
 
 ---
 
+## ✨ Modern interface
+
+The windowed app has a clean Apple-inspired interface with:
+
+- Light and dark themes that follow Windows automatically
+- Apple purple accents, rounded buttons, and rounded input fields
+- A responsive layout that adapts when the window is resized
+- A slim progress bar with clear download status
+- A collapsible **Show details** panel for technical logs
+- A matching dark title bar when Windows supports it
+
+To override the Windows theme, run one of these commands from PowerShell:
+
+```powershell
+.\Video Downloader.exe --theme light
+.\Video Downloader.exe --theme dark
+```
+
+The theme option can also be combined with automatic download arguments.
+
+---
+
 ## 🖥️ Easiest way — the windowed app
 
 Double-click **Video Downloader.exe**, paste a URL, and click Download.
@@ -27,8 +49,9 @@ Double-click **Video Downloader.exe**, paste a URL, and click Download.
 | **Update yt-dlp** | Refresh the download engine if sites ever stop working |
 | **Facebook login…** | Log into Facebook so the app can download private videos |
 
-The window is resizable and automatically matches your Windows light/dark theme.  
-Add `--theme light` or `--theme dark` to override.
+The window is resizable and automatically matches your Windows light/dark theme.
+Click **Show details ▾** beneath the progress area whenever you want to see
+the technical download log.
 
 > Everything the app needs is already in the zip — the app itself downloads nothing  
 > (which also keeps antivirus programs happy). See [the helper tools](#-helper-tools-already-included).
