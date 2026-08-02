@@ -56,6 +56,7 @@ class VideoDownloaderApp : Form
     AppleButton btnDownload;
     AppleButton btnUpdate;
     AppleButton btnFbLogin;
+    AppleButton btnTheme;
     AppleProgressBar progress;
     Label lblStatus;
     Label lblVersion;
@@ -272,6 +273,13 @@ class VideoDownloaderApp : Form
         btnFbLogin.Margin = new Padding(0, 0, 8, 0);
         btnFbLogin.Click += btnFbLogin_Click;
         footerButtons.Controls.Add(btnFbLogin);
+
+        btnTheme = new AppleButton();
+        btnTheme.Text = Theme.Dark ? "Light mode" : "Dark mode";
+        btnTheme.Size = new Size(100, 30);
+        btnTheme.Margin = new Padding(0, 0, 8, 0);
+        btnTheme.Click += btnTheme_Click;
+        footerButtons.Controls.Add(btnTheme);
 
         btnUpdate = new AppleButton();
         btnUpdate.Text = "Update yt-dlp";
@@ -524,6 +532,62 @@ class VideoDownloaderApp : Form
     {
         string cookies = Path.Combine(ExeDir, "cookies.txt");
         btnFbLogin.Text = File.Exists(cookies) ? "Facebook login (saved)" : "Facebook login...";
+    }
+
+    void btnTheme_Click(object sender, EventArgs e)
+    {
+        Theme.Toggle();
+        ReapplyTheme();
+        btnTheme.Text = Theme.Dark ? "Light mode" : "Dark mode";
+        Theme.ApplyTitleBarTheme(Handle);
+    }
+
+    void ReapplyTheme()
+    {
+        BackColor = Theme.Bg;
+        ForeColor = Theme.Text;
+        layout.BackColor = Theme.Bg;
+
+        WalkTheme(layout);
+
+        txtLog.BackColor = Theme.Card;
+        txtLog.ForeColor = Theme.Sub;
+        logCard.BackColor = Theme.Card;
+
+        txtUrl.Invalidate();
+        txtUrl.Inner.BackColor = Theme.Card;
+        txtUrl.Inner.ForeColor = Theme.Text;
+        txtOut.Invalidate();
+        txtOut.Inner.BackColor = Theme.Card;
+        txtOut.Inner.ForeColor = Theme.Text;
+
+        foreach (var b in new AppleButton[] { btnDownload, btnUpdate, btnFbLogin, btnTheme, btnBrowse })
+            b.Invalidate();
+        progress.Invalidate();
+        cmbQuality.Invalidate();
+    }
+
+    void WalkTheme(Control parent)
+    {
+        foreach (Control c in parent.Controls)
+        {
+            if (c is AppleButton || c is AppleTextBox || c is AppleComboBox ||
+                c is AppleProgressBar) continue;
+            if (c is Panel || c is TableLayoutPanel || c is FlowLayoutPanel)
+                c.BackColor = Theme.Bg;
+            else if (c is Label)
+            {
+                Label lb = (Label)c;
+                lb.ForeColor = lb.Font.Bold ? Theme.Text : Theme.Sub;
+            }
+            else if (c is TextBox)
+            {
+                TextBox tb = (TextBox)c;
+                tb.BackColor = Theme.Card;
+                tb.ForeColor = Theme.Text;
+            }
+            if (c.Controls.Count > 0) WalkTheme(c);
+        }
     }
 
     void btnFbLogin_Click(object sender, EventArgs e)
@@ -1036,7 +1100,13 @@ static class Theme
             catch { }
         }
 
-        if (Dark)
+        SetColors(Dark);
+    }
+
+    static void SetColors(bool dark)
+    {
+        Dark = dark;
+        if (dark)
         {
             Bg        = Color.FromArgb(0x1C, 0x1C, 0x1E);
             Card      = Color.FromArgb(0x2C, 0x2C, 0x2E);
@@ -1056,6 +1126,11 @@ static class Theme
             Accent    = Color.FromArgb(0xAF, 0x52, 0xDE); // Apple purple (light)
             ControlBg = Color.FromArgb(0xE8, 0xE8, 0xED);
         }
+    }
+
+    public static void Toggle()
+    {
+        SetColors(!Dark);
     }
 
     // Lightens (positive delta) or darkens (negative) a color per channel.
